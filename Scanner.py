@@ -36,7 +36,8 @@ class LidarServer:
     def __init__(self):
         self.points = []
         self.status = "ready"
-        self.msgS = "rd"
+        self.msgS = "rd" # every command contain 2 char - TYPE + may contain 6 char of data
+                                                                # (probably increase to 8 char)
         self.only_reading = False
 
         self.x_max = 128
