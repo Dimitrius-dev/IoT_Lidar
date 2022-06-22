@@ -35,15 +35,22 @@ class Scanner:
 class LidarServer:
     def __init__(self):
         self.points = []
-        self.status = "ready"
-        self.msgS = "rd" # every command contain 2 char - TYPE + may contain 6 char of data
-                                                                # (probably increase to 8 char)
-        self.only_reading = False
+        self.status = "ready" # start value
 
-        self.x_max = 128
-        self.y_max = 64
-        self.x_val = 0
-        self.y_val = 0
+        self.msgS = "" # every command contain 2 char - TYPE + may contain 6 char of data
+                                                                # (probably increase to 8 char)
+        self.msgS = "rd" if self.status == "ready" else self.msgS = ""
+
+        self.x_max = 128*2
+        self.y_max = 64*2
+        self.x_iter = 0
+        self.y_iter = 0
+
+    def write_raw_file(self):
+        f = open('data_raw.txt', 'w+')
+        for i in self.points:
+            f.write(i)
+        f.close()
 
     def write_file(self):
         f = open('data.obj', 'w+')
@@ -55,49 +62,49 @@ class LidarServer:
                     f'f {i * self.x_max + 1 + j} {i * self.x_max + 2 + j} {(i + 1) * self.x_max + 2 + j} {(i + 1) * self.x_max + 1 + j}\n')
         f.close()
 
-    def is_only_reading(self):
-        return self.only_reading
-
     def request(self):
         return self.msgS
 
     def response(self, msg):
         if self.status == "ready":
-            if msg == "ok":
-                print('ghj')
+            if msg[0:2] == "ok":
+                print('device is ready')
                 self.status = "scan"
-                self.msgS = "st" + str(self.x_max).rjust(3, '0') + str(self.y_max).rjust(3,
-                                                                                         '0')  # only 2 digit in number
+                self.msgS = "sс" + str(self.x_max).rjust(4, '0') + str(self.y_max).rjust(4, '0')
+                                                                        # only 2 digit in number
             return
 
         elif self.status == "scan":
-            self.only_reading = True
-            if msg == "dn":
+            if msg[0:2] == "dn":
                 self.status = "exit"
                 self.msgS = "ex"
-                self.only_reading = False
 
                 print("scanning is done\n")
+                self.write_raw_file()
                 self.write_file()
+
+                raise ConnectionError # exit due to finish
                 # self.show()
                 # for i in self.points:
                 #     print(i.toStringXYZ())
                 return
 
-            r = int(msg)
-            point = Point(r, self.x_max, self.y_max, self.x_val, self.y_val)
-            self.points.append(point)
+            if msg[0:2] == "pt":
+                self.msgS = "pg"
+                r = int(msg[2:])
+                point = Point(r, self.x_max, self.y_max, self.x_iter, self.y_iter)
+                self.points.append(point)
 
-            self.x_val += 1
-            if self.x_val == self.x_max:
-                print("new line" + '\n')
-                self.y_val += 1
-                self.x_val = 0
+                self.x_iter += 1
+                if self.x_iter == self.x_max:
+                    print("new line" + '\n')
+                    self.y_iter += 1
+                    self.x_iter = 0
 
-            if self.y_val == self.y_max:
-                print("exit" + '\n')
-                self.x_val = 0
-                self.y_val = 0
+                if self.y_iter == self.y_max:
+                    print("exit" + '\n')
+                    self.x_iter = 0
+                    self.y_iter = 0
 
         elif self.status == "exit":
             # self.write_file()
@@ -110,30 +117,28 @@ class ClientThread(threading.Thread):
     def __init__(self, ip, port, socket, l):
         threading.Thread.__init__(self)
 
-        self.ip = ip
-        self.port = port
         self.socket = socket
-        self.msg_size = 5625  # start value
-        self.msg = ""
         self.clients = l
 
         self.msg_head_size = 5
 
         self.lidar_server = LidarServer()
-
         print("[+] New thread started for " + ip + ":" + str(port))
 
-    def update_msg(self, msg):
-        self.msg = msg.encode()
-        self.msg_size = len(msg)
+    def send(self, msg):
+        self.socket.send(msg.encode())
 
-    def recv_timeout(self, msg_size):
+    def do_send(self, message_send: str):
+        self.send(str(len(message_send)).rjust(self.msg_head_size, '0'))  # ?
+        self.send(str(message_send))
+
+    def recv_timeout(self, msg_size) -> bytes:
         self.socket.settimeout(timeout_read)
         data = self.socket.recv(msg_size)
         return data
 
     def read(self, msg_size):
-        data = ""
+        data = b''
         buf_size = 0
         while buf_size < msg_size:
             buf = self.recv_timeout(msg_size - buf_size)
@@ -143,21 +148,27 @@ class ClientThread(threading.Thread):
             buf_size += len(buf)
         return data.decode()
 
+    def do_read(self) -> str:
+        msg_size = self.read(self.msg_head_size)
+        # print(f"---msg_size: {msg_size}")
+        msg = self.read(int(msg_size))
+        # print(f"---msg: {msg}")
+        return msg
+
+    def close(self):
+        self.socket.close()
+
     def run(self):
         try:
             while True:
-                self.msg = self.lidar_server.request()
+                msg = self.lidar_server.request()
+                # for c in self.clients:
+                #     if int(c.fileno()) == int(self.socket.fileno()):
+                #         c.send(str(len(self.msg)).rjust(5, '0').encode())
+                #         c.send(self.msg.encode())
+                #     continue
 
-                for c in self.clients:
-                    if int(c.fileno()) == int(self.socket.fileno()):
-                        c.send(str(len(self.msg)).rjust(5, '0').encode())
-                        c.send(self.msg.encode())
-                    continue
-
-                self.msg_size = int(self.read(self.msg_head_size))
-                print("length msg:", self.msg_size)
-                self.msg = self.read(self.msg_size)
-                print("msg(s): ", self.msg)
+                self.do_send(msg)
 
                 self.lidar_server.response(self.msg)
 
