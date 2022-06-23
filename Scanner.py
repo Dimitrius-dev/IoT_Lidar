@@ -1,6 +1,6 @@
 import threading
 
-from config import host, port, timeout_accept, timeout_read
+from config import host, port, timeout_accept, timeout_read, x_max, y_max
 
 import math
 import socket
@@ -35,6 +35,8 @@ class Scanner:
 
         new_thread = ClientThread(ip, port, clientsock, self.lidars, mode="scan")
         new_thread.start()
+        new_thread.join()
+
 
 class LidarServer:
     def __init__(self, mode="scan"):
@@ -48,8 +50,8 @@ class LidarServer:
         if mode == "scan": self.msgS = "rd"
         if mode == "test": self.msgS = "ex"
 
-        self.x_max = 128*2
-        self.y_max = 64*2
+        self.x_max = x_max
+        self.y_max = y_max
         self.x_iter = 0
         self.y_iter = 0
 
@@ -59,7 +61,7 @@ class LidarServer:
     def write_raw_file(self):
         f = open('data_raw.txt', 'w+')
         for i in self.points:
-            f.write(i)
+            f.write(str(i.get_raw()) + '\n')
         f.close()
 
     def write_file(self):
@@ -94,12 +96,14 @@ class LidarServer:
                 self.write_raw_file()
                 self.write_file()
 
-                raise ConnectionError # exit due to finish
+                # raise ConnectionError # exit due to finish
 
                 # self.show()
                 # for i in self.points:
                 #     print(i.toStringXYZ())
                 return
+
+            # if msg[0:2] == "pr"
 
             if msg[0:2] == "pt":
                 self.recieve = False
@@ -119,6 +123,7 @@ class LidarServer:
                     self.x_iter = 0
                     self.y_iter = 0
 
+                    # self.status = "dn" # =================
 
         elif self.status == "exit":
             # self.write_file()
@@ -201,6 +206,8 @@ class ClientThread(threading.Thread):
 
 class Point:
     def __init__(self, r, x_max, y_max, x_val, y_val):
+        self.r = r
+
         self.x: float
         self.y: float
         self.z: float
@@ -208,6 +215,9 @@ class Point:
         self.x = r * math.sin(math.radians(180 - (180 / y_max) * y_val)) * math.cos(math.radians((360 / x_max) * x_val))
         self.y = r * math.sin(math.radians(180 - (180 / y_max) * y_val)) * math.sin(math.radians((360 / x_max) * x_val))
         self.z = r * math.cos(math.radians(180 - (180 / y_max) * y_val))
+
+    def get_raw(self):
+        return self.r
 
     def get_x(self):
         return self.x

@@ -5,3 +5,6 @@ port = 8081
 
 timeout_accept = 5
 timeout_read = 16
+
+x_max = 32
+y_max = 16

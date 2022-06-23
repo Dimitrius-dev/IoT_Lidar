@@ -23,10 +23,10 @@
 #define BZ 12
 
 //================================== WIFI
-const char* ssid = "MGTS-455";
-const char* password = "4953306832";
+const char* ssid = "lidar";
+const char* password = "d013579b";
 //================================== SERVER
-const char * host = "192.168.100.5";
+const char * host = "45.143.136.111"; // "192.168.100.5";
 const uint16_t port = 8081;
 //================================== MESSAGE
 
@@ -82,6 +82,7 @@ void setup()
 
 void scanning(int x_max, int y_max)
 {
+  beep(BZ, 200, 0, 1);// start scanning
   //x_in кратно MAX_STEPS (4096) т.е. 2,8,16,32,64..
 
   int step_x = MAX_STEPS / x_max;
@@ -95,14 +96,18 @@ void scanning(int x_max, int y_max)
       lidar.getData(dist);
       msg = String("pt")+String(dist);
       tcp_client.write_socket(msg);
+      Serial.print("module:");
+      Serial.println(msg);
       //tcp_client.read_socket(msg);//ping
       motorX.step(step_x);
     }
     motorX.step(-MAX_STEPS);
     motorY.step((-1)*step_y);
   }
-  
   motorY.step((-1)*(-MAX_STEPS/2));
+
+  msg = "dn";
+  tcp_client.write_socket(msg);
 }
 
 String action(String msg)
@@ -129,7 +134,7 @@ String action(String msg)
     Serial.println(cord_y);
     
     scanning(cord_x, cord_y);
-    return "dn";
+    return "ex";
   }
   return "ex";
 }
@@ -142,6 +147,7 @@ void loop()
       return;
   }
   beep(BZ, 50, 30, 5);//connected to the server
+  
   while(tcp_client.is_connected())
   {
     tcp_client.read_socket(msg);
@@ -154,6 +160,9 @@ void loop()
     if(msg.equals("ex")){ break; }
     
     tcp_client.write_socket(msg);
+    Serial.print("module:");
+    Serial.println(msg);
     //delay(1000);
   }
+  beep(BZ, 500, 0, 1);//disconnected 
 }

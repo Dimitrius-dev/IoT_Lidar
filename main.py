@@ -10,6 +10,7 @@ import time
 
 def telegram_bot(token):
     bot = TeleBot(token)
+    scan = Scanner()
 
     @bot.message_handler(commands=["start"])
     def start_message(message):
@@ -36,7 +37,6 @@ def telegram_bot(token):
         elif message.text.lower() == "/check":
             try:
                 bot.send_message(message.chat.id, "Соединение...")
-                scan = Scanner()
                 scan.check()
                 bot.send_message(message.chat.id, "Модуль найден")
             except socket.timeout:
@@ -68,8 +68,9 @@ def telegram_bot(token):
     def check_scan(message):
         try:
             if message.text.lower() == "/yes":
-                scan = Scanner()
+
                 scan.scan()
+                bot.send_message(message.chat.id, "Сканирование...")
                 bot.send_document(chat_id=message.chat.id, document=open('data.obj', 'rb'))
 
             if message.text.lower() == "/no":
