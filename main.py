@@ -14,7 +14,8 @@ def telegram_bot(token):
     @bot.message_handler(commands=["start"])
     def start_message(message):
         bot.send_message(message.chat.id, "Привет, это "\
-                                          "студенческий проект для игры пиксель арт"\
+                                          "студенческий проект Lidar IoT интернет вещей академии самсунг"\
+                                          "Дмитрия Белова"\
                                           "нажмите /help для получения информации")
 
     @bot.message_handler(content_types=["text"])
