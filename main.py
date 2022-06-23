@@ -25,7 +25,9 @@ def telegram_bot(token):
                 help = "команды:\n\n" \
                         "/help - данная команда\n\n" \
                         "/check - проверить соединение\n\n" \
-                        "/scan - начать сканирование"
+                        "/scan - начать сканирование\n\n" \
+                        "/get - получить последний скан\n\n" \
+                        "/get_raw - получить последние материалы"
                 bot.send_message(message.chat.id, help)
             except Exception as ex:
                 bot.send_message(message.chat.id, "error")
@@ -41,11 +43,24 @@ def telegram_bot(token):
             except Exception as ex:
                 bot.send_message(message.chat.id, ex)
 
+        elif message.text.lower() == "/get_raw":
+            try:
+                bot.send_message(message.chat.id, "Материалы последнего скана")
+                bot.send_document(chat_id=message.chat.id, document=open('data_raw.txt', 'rb'))
+            except Exception as ex:
+                bot.send_message(message.chat.id, ex)
+
+        elif message.text.lower() == "/get":
+            try:
+                bot.send_message(message.chat.id, "Последний скан")
+                bot.send_document(chat_id=message.chat.id, document=open('data.obj', 'rb'))
+            except Exception as ex:
+                bot.send_message(message.chat.id, ex)
+
         elif message.text.lower() == "/scan":
             try:
                 next_step = bot.send_message(message.chat.id, "Начать сканирование? ( /Yes --- /No )")
                 bot.register_next_step_handler(next_step, check_scan)
-                # bot.send_document(chat_id=message.chat.id, document=open('data.obj', 'rb'))
             except Exception as ex:
                 bot.send_message(message.chat.id, ex)
 
@@ -64,8 +79,8 @@ def telegram_bot(token):
         finally:
             bot.clear_step_handler_by_chat_id(message.chat.id)
 
-    # bot.infinity_polling(timeout=10, long_polling_timeout=5)
-    bot.polling()
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    # bot.polling()
 
 if __name__ == '__main__':
     telegram_bot(token)
