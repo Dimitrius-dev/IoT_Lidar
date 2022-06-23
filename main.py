@@ -35,6 +35,7 @@ def telegram_bot(token):
                 bot.send_message(message.chat.id, "Соединение...")
                 scan = Scanner()
                 scan.check()
+                bot.send_message(message.chat.id, "Модуль найден")
             except socket.timeout:
                 bot.send_message(message.chat.id, "Связь с модулем отсутствует")
             except Exception as ex:
@@ -59,11 +60,12 @@ def telegram_bot(token):
                 bot.clear_step_handler_by_chat_id(message.chat.id)
                 return
         except Exception as ex:
-            bot.send_message(message.chat.id)
+            bot.send_message(message.chat.id, ex)
         finally:
             bot.clear_step_handler_by_chat_id(message.chat.id)
 
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    # bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    bot.polling()
 
 if __name__ == '__main__':
     telegram_bot(token)

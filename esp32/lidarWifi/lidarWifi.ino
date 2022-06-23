@@ -93,9 +93,9 @@ void scanning(int x_max, int y_max)
     {
       lidar.getData(dist);//first no clear
       lidar.getData(dist);
-      msg = String(dist);
+      msg = String("pt")+String(dist);
       tcp_client.write_socket(msg);
-      tcp_client.read_socket(msg);//ping
+      //tcp_client.read_socket(msg);//ping
       motorX.step(step_x);
     }
     motorX.step(-MAX_STEPS);
@@ -116,8 +116,10 @@ String action(String msg)
 
   if(command.equals("rd")){ return "ok"; }
 
-  if(command.equals("sс"))
+  if(command.equals("sc"))
   {
+    //Serial.println("hello:");
+    
     cord_x = msg.substring(2, 6).toInt();// sc01280064 -> get 0128
     cord_y = msg.substring(6).toInt();// sc01280064 -> get 0064
 
@@ -129,6 +131,7 @@ String action(String msg)
     scanning(cord_x, cord_y);
     return "dn";
   }
+  return "ex";
 }
 
 void loop()
@@ -138,13 +141,18 @@ void loop()
       delay(1000);
       return;
   }
-  beep(BZ, 50, 30, 5);//
+  beep(BZ, 50, 30, 5);//connected to the server
   while(tcp_client.is_connected())
   {
     tcp_client.read_socket(msg);
     Serial.print("server: ");
     Serial.println(msg);
+
+    //Serial.println("server: 111111111111");
+    
     msg = action(msg);
+    if(msg.equals("ex")){ break; }
+    
     tcp_client.write_socket(msg);
     //delay(1000);
   }

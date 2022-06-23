@@ -4,4 +4,4 @@ host = "192.168.100.5"
 port = 8081
 
 timeout_accept = 5
-timeout_read = 30
+timeout_read = 16
